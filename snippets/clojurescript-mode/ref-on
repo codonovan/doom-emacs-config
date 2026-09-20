@@ -1,0 +1,12 @@
+# -*- mode: snippet -*-
+# name: refx on-success event
+# uuid:
+# key: refx-ons
+# condition: t
+# --
+(rf/reg-event-fx
+ :${1:namespace/event}-on-success
+ (fn [{db :db} [_ ${2:success} ${3:context}]]
+   (log-js "${1}-on-success" (clj->js {:${2:success} ${2:success} :${3:context} ${3:context}}))
+   (let []
+     {:db db})))

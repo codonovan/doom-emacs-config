@@ -1,0 +1,26 @@
+# -*- mode: snippet -*-
+# name: ai-spec
+# key: ais
+# --
+
+
+# Features: ${n:Feature}
+> Ingest all the information given, implement the low-level tasks, and generate code to satisfy our objectives
+
+## Objectives
+
+
+## Context
+- react-native public transport app written in clojurescript
+- Uses the Polylith architecture
+- Pay special attention to any markdown files for implementation, style and usage guidelines
+
+## Implementation Notes
+- Be sure to fulfil every detail of every task
+- Don't skip over any details. Implement everything that was asked for
+- All code should be idomatic clojurescript
+- Keep it simple, do the minium required to fulfil the request
+
+## Low-Level Tasks
+> Ordered from start to finish
+> Generate edits one at a time so we don't overlap any changes

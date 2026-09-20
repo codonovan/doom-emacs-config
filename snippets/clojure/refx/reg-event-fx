@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: refx/reg-event-fx
+# key: rre
+# --
+
+(rf/reg-event-fx
+  $1
+  (fn [{:keys [db]} [_ $2]]
+  {:db db}))
