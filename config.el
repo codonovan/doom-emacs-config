@@ -3,6 +3,23 @@
 ;; Place your private configuration here! Remember, you do not need to run 'doom
 ;; sync' after modifying this file!
 
+;; Native compilation: point libgccjit's linker at gcc's runtime libs
+;; (libemutls_w.a, libgcc_s, ...). Without this, native-comp fails with
+;; "ld: library 'emutls_w' not found" after a gcc/Command-Line-Tools bump.
+;; Globbed so it survives gcc version/SDK-triple changes.
+(when (eq system-type 'darwin)
+  (let* ((emutls (car (file-expand-wildcards
+                       "/opt/homebrew/lib/gcc/current/gcc/*/*/libemutls_w.a")))
+         (dirs (delq nil (list "/opt/homebrew/lib/gcc/current"
+                               (and emutls (directory-file-name
+                                            (file-name-directory emutls)))))))
+    (when dirs
+      (setenv "LIBRARY_PATH"
+              (mapconcat #'identity
+                         (append dirs
+                                 (and (getenv "LIBRARY_PATH")
+                                      (list (getenv "LIBRARY_PATH"))))
+                         ":")))))
 
 ;; Some functionality uses this to identify you, e.g. GPG configuration, email
 ;; clients, file templates and snippets. It is optional.
