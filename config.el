@@ -111,11 +111,180 @@
 ;; Open Doom Emacs maximised
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
+;; Numbered window selection (M-1..M-5 below rely on this being on)
+(use-package! winum
+  :init
+  ;; Number windows per-frame; the global default makes M-1..M-5 jump
+  ;; between emacsclient frames.
+  (setq winum-scope 'frame-local)
+  :config
+  (winum-mode 1))
+
 ;;(map! "M-m p f" #'projectile-find-file)
 (map! "M-m p f" #'projectile-find-file
+      "M-m p k" #'projectile-kill-buffers
       "M-m p s" #'+default/search-project
-      "M-m b b" #'switch-to-buffer
+      "M-m b b" #'persp-switch-to-buffer
       "M-1"     #'winum-select-window-1
       "M-2"     #'winum-select-window-2
       "M-3"     #'winum-select-window-3
-      "M-4"     #'winum-select-window-4)
+      "M-4"     #'winum-select-window-4
+      "M-5"     #'winum-select-window-5
+      "M-?"     #'lsp-ui-peek-find-references
+      "<f5>"    #'magit-status
+      )
+
+(setq lsp-file-watch-ignored
+      '(
+        "[/\\\\]\\.git$"
+        "[/\\\\]node_modules$"
+        "[/\\\\]ios/Pods$"
+        "[/\\\\]ios/build$"
+        "[/\\\\]android/app/build$"
+        "[/\\\\]android/app/.cxx$"
+        "[/\\\\]mobile-app/.cache$"
+        "[/\\\\]\\.clj-kondo$"
+        "[/\\\\]\\.shadow-cljs$"
+        ))
+
+;;
+;; Projectile config
+;;
+(after! projectile
+  (nconc projectile-globally-ignored-directories
+         '(".lsp" ".tmp" ".cache" ".local" "node_modules" ".clj-kondo")))
+
+(after! js2-mode
+  (add-to-list 'projectile-globally-ignored-directories "node_modules" ".firebase"))
+
+;; (after! clojure-mode
+;;   (add-to-list 'projectile-globally-ignored-directories ".clj-kondo"))
+
+
+
+;; Jump to registrations of re-frame subscriptions, event handlers and fx
+;;; Code:
+(after! cider
+  (require 'cider-util)
+  (require 'cider-resolve)
+  (require 'cider-client)
+  (require 'cider-common)
+  (require 'cider-find))
+
+(defun re-frame-jump-to-reg ()
+  (interactive)
+  (let* ((kw (cider-symbol-at-point 'look-back))
+         (ns-qualifier (and
+                        (string-match "^:+\\(.+\\)/.+$" kw)
+                        (match-string 1 kw)))
+         (kw-ns (if ns-qualifier
+                    (cider-resolve-alias (cider-current-ns) ns-qualifier)
+                  (cider-current-ns)))
+         (kw-to-find (concat "::" (replace-regexp-in-string "^:+\\(.+/\\)?" "" kw))))
+
+    (when (and ns-qualifier (string= kw-ns (cider-current-ns)))
+      (error "Could not resolve alias \"%s\" in %s" ns-qualifier (cider-current-ns)))
+
+    (progn (cider-find-ns "-" kw-ns)
+           (search-forward-regexp (concat "reg-[a-zA-Z-]*[ \\\n]+" kw-to-find) nil 'noerror))))
+
+;; It's often better to use Doom's `map!` macro for keybindings
+;; for easier discovery and potential unbinding.
+   (global-set-key (kbd "M->") 're-frame-jump-to-reg) ; Original
+;; (map! :leader          ; Or :leader :n (for normal mode only) etc.
+;;       :desc "Jump to re-frame registration"
+;;       "M->" #'re-frame-jump-to-reg)
+
+
+(use-package! gterm
+  :defer t
+  :init
+  (setq gterm-always-compile-module t))
+
+;; Psi — AI agent frontend over rpc-edn.
+;; Run `M-x psi-emacs-start` (global) or `M-x psi-emacs-project` (per-project).
+(use-package! psi
+  :commands (psi-emacs-start psi-emacs-project)
+  :init
+  (setq psi-emacs-command '("psi" "--rpc-edn"))
+  :config
+  (map! :leader
+        (:prefix ("o" . "open")
+         :desc "Psi (global)"  "p" #'psi-emacs-start
+         :desc "Psi (project)" "P" #'psi-emacs-project)))
+
+(defun revert-all-file-buffers ()
+  "Refreshes all open buffers from their respective files."
+  (interactive)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (and (buffer-file-name) (not (buffer-modified-p)))
+        (revert-buffer t t t)))))
+
+
+;; ──────────────────────────────────────────────────────────────────────
+;; Name each terminal (emacsclient -t) frame's workspace after the terminal
+;; it runs in. The zsh wrapper passes the current herdr workspace label via
+;; the `terminal-workspace' frame parameter (emacsclient -F); if that's
+;; absent we fall back to the tty device basename. Only tty frames are
+;; affected — GUI frames (`ec') keep Doom's default "#N" behaviour.
+;; Reopening `e' in the same herdr workspace reuses its workspace.
+(after! persp-mode
+  (defun my/ws-name-from-terminal (&optional frame)
+    "Derive a workspace name for FRAME's terminal.
+Prefer the `terminal-workspace' frame parameter (set by the shell wrapper to
+the herdr workspace label); otherwise use the tty device basename."
+    (let* ((frame (or frame (selected-frame)))
+           (explicit (frame-parameter frame 'terminal-workspace))
+           (tty (and (frame-live-p frame)
+                     (terminal-live-p (frame-terminal frame))
+                     (terminal-name (frame-terminal frame)))))
+      (or (and (stringp explicit) (not (string-empty-p explicit)) explicit)
+          (and (stringp tty)
+               (not (member tty '("initial_terminal" "unknown")))
+               (file-name-nondirectory tty)))))
+
+  (defun my/ws-name-after-terminal-a (frame &rest _)
+    "Name FRAME's freshly-created workspace after its terminal.
+Reuses an existing workspace of that name (so reopening `e' in the same herdr
+workspace resumes it), else renames the transient `#N' workspace, or spawns a
+new one off `main'."
+    (when (and (bound-and-true-p persp-mode)
+               (frame-live-p frame)
+               (eq (framep frame) t))        ; tty frames only
+      (with-selected-frame frame
+        (condition-case-unless-debug err
+            (let* ((desired (my/ws-name-from-terminal frame))
+                   (current (+workspace-current-name)))
+              (when (and desired
+                         (not (equal desired current))
+                         (not (equal current persp-nil-name)))
+                (cond
+                 ;; A workspace with this name already exists: switch to it
+                 ;; (so multiple terminals in one herdr workspace share it)
+                 ;; and drop the transient `#N' we just spun up.
+                 ((+workspace-exists-p desired)
+                  (+workspace-switch desired)
+                  (when (string-match-p "^#[0-9]+$" current)
+                    (ignore-errors (+workspace-kill current))))
+                 ;; Fresh `#N' created for this frame: rename it in place.
+                 ((string-match-p "^#[0-9]+$" current)
+                  (condition-case nil
+                      (+workspace-rename current desired)
+                    (error (+workspace-switch desired t))))
+                 ;; First frame landed on `main' (or similar): leave that
+                 ;; alone and spawn a dedicated workspace instead.
+                 (t
+                  (+workspace-switch desired t)))))
+          (error (message "ws-name-after-terminal: %S" err))))))
+
+  (advice-add #'+workspaces-associate-frame-fn :after
+              #'my/ws-name-after-terminal-a))
+
+;; Magit re-highlights the whole current section on every command. On a TTY
+;; that repaints the section per keystroke and flickers, so keep it GUI-only.
+(add-hook! 'magit-mode-hook
+  (defun +magit-disable-tty-section-highlight-h ()
+    (unless (display-graphic-p)
+      (setq-local magit-section-highlight-current nil
+                  magit-section-highlight-selection nil))))
