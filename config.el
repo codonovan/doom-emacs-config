@@ -56,7 +56,15 @@
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 ;;(load-theme 'doom-zenburn)
-(setq doom-theme 'doom-zenburn)
+
+;; Gruvbox Material. Upstream (sainnhe/gruvbox-material) is Vim-only and there is
+;; no Emacs package, so the theme is hand-ported from its palette and lives in
+;; themes/doom-gruvbox-material-theme.el — no external package to install.
+;; medium + material is what matches the Ghostty and Herdr palettes
+;; (bg0 #282828, fg0 #d4be98). Both must be set before the theme loads.
+(setq doom-gruvbox-material-background "medium"   ; soft | medium | hard
+      doom-gruvbox-material-palette    "material") ; material | mix | original
+(setq doom-theme 'doom-gruvbox-material)
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
