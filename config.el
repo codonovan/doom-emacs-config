@@ -42,7 +42,10 @@
 ;;      doom-variable-pitch-font (font-spec :family "Fira Sans" :size 13))
 ;;
 
-(setq doom-font (font-spec :family "JetBrainsMono Nerd Font Mono" :size 14))
+;; Mac is a Retina panel; the Linux box is a 32-inch 4K at 133% scale, which
+;; needs a larger point size to match.
+(setq doom-font (font-spec :family "JetBrainsMono Nerd Font Mono"
+                           :size (if (featurep :system 'macos) 14 18)))
 
 ;; (setq doom-font     (font-spec :family "Source Code Pro" :size 15)
 ;;       doom-big-font (font-spec :family "Source Code Pro" :size 24))
