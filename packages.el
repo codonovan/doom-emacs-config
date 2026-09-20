@@ -49,4 +49,15 @@
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;; (unpin! t)
 
+;; Select a buffer by number
 (package! winum)
+
+;; Ghostty-backed terminal (requires Zig 0.15.2+ and Git on PATH)
+(package! gterm
+  :recipe (:host github :repo "rwc9u/emacs-libgterm" :files ("*")))
+
+;; Psi — AI agent frontend (rpc-edn). Requires `psi` on PATH.
+(package! psi-emacs
+  :recipe (:host github :repo "hugoduncan/psi"
+           :files ("components/emacs-ui/*.el")))
+
