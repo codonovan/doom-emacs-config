@@ -199,23 +199,6 @@
 ;;       "M->" #'re-frame-jump-to-reg)
 
 
-(use-package! gterm
-  :defer t
-  :init
-  (setq gterm-always-compile-module t))
-
-;; Psi — AI agent frontend over rpc-edn.
-;; Run `M-x psi-emacs-start` (global) or `M-x psi-emacs-project` (per-project).
-(use-package! psi
-  :commands (psi-emacs-start psi-emacs-project)
-  :init
-  (setq psi-emacs-command '("psi" "--rpc-edn"))
-  :config
-  (map! :leader
-        (:prefix ("o" . "open")
-         :desc "Psi (global)"  "p" #'psi-emacs-start
-         :desc "Psi (project)" "P" #'psi-emacs-project)))
-
 (defun revert-all-file-buffers ()
   "Refreshes all open buffers from their respective files."
   (interactive)
